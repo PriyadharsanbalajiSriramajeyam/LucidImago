@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Photo Search</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            z-index: 2;
+            position: relative;
+        }
+
+        h1 {
+            color: white;
+            font-size: 3rem;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+            transition: transform 0.5s ease, opacity 0.5s ease;
+        }
+
+        .dispersive {
+            animation: dispersiveEffect 1.5s forwards;
+        }
+
+        @keyframes dispersiveEffect {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .search-bar {
+            position: relative;
+            width: 60%;
+            margin: 0 auto;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .search-bar:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            background: transparent;
+            color: white;
+            outline: none;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .search-icon {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            border: 3px solid white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #ff7e5f, #feb47b);
+            animation: pulse 1.5s infinite;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .search-icon:hover {
+            transform: scale(1.2);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 10px rgba(255, 126, 95, 0.7), 0 0 20px rgba(255, 180, 123, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(255, 126, 95, 0.9), 0 0 30px rgba(255, 180, 123, 0.9);
+            }
+        }
+
+        .results {
+            margin-top: 40px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            padding: 0 20px;
+        }
+
+        .image-container {
+            position: relative;
+            width: 180px;
+            height: 240px;
+        }
+
+        .results img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .results img:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0px 8px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .download-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            font-size: 12px;
+            color: white;
+            background: rgba(0, 0, 0, 0.6);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none;
+            transition: background 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .image-container:hover .download-btn {
+            display: block;
+        }
+
+        .load-more {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background: linear-gradient(135deg, #ff7e5f, #feb47b);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .load-more:hover {
+            background: linear-gradient(135deg, #feb47b, #ff7e5f);
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        @media (max-width: 768px) {
+            .search-bar {
+                width: 80%;
+            }
+
+            input {
+                font-size: 16px;
+            }
+
+            .results img {
+                width: 140px;
+                height: 180px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .search-bar {
+                width: 90%;
+            }
+
+            input {
+                font-size: 14px;
+            }
+
+            .results img {
+                width: 120px;
+                height: 160px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="3dCanvas"></canvas>
+    <div class="container">
+        <h1 id="dynamicHeading">Search Photos</h1>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Enter a keyword">
+            <div class="search-icon" onclick="searchPhotos()">⚡</div>
+        </div>
+        <div class="results" id="results"></div>
+        <button class="load-more" id="loadMoreButton" onclick="loadMorePhotos()" style="display: none;">Load More</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.153.0/three.min.js"></script>
+    <script>
+        const canvas = document.getElementById('3dCanvas');
+        const renderer = new THREE.WebGLRenderer({ canvas });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 10;
+
+        const particleCount = 800;
+        const particles = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+
+        for (let i = 0; i < particleCount * 3; i++) {
+            positions[i] = (Math.random() - 0.5) * 30;
+        }
+
+        particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const particleMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.2 });
+        const particleSystem = new THREE.Points(particles, particleMaterial);
+
+        scene.add(particleSystem);
+
+        let currentShapeIndex = 0;
+        const shapes = [
+            new THREE.SphereGeometry(3, 32, 32),
+            new THREE.BoxGeometry(4, 4, 4),
+            new THREE.TorusGeometry(3, 0.8, 16, 100),
+            new THREE.ConeGeometry(3, 6, 32),
+            new THREE.CylinderGeometry(3, 3, 6, 32),
+            new THREE.DodecahedronGeometry(3),
+            new THREE.IcosahedronGeometry(3),
+            new THREE.OctahedronGeometry(3),
+            new THREE.TetrahedronGeometry(3),
+            new THREE.TorusKnotGeometry(2.5, 0.7, 100, 16)
+        ];
+
+        function morphParticles(targetGeometry) {
+            const targetPositions = targetGeometry.attributes.position.array;
+            const currentPositions = particles.attributes.position.array;
+
+            for (let i = 0; i < currentPositions.length; i++) {
+                if (targetPositions[i]) {
+                    currentPositions[i] += (targetPositions[i] - currentPositions[i]) * 0.1;
+                } else {
+                    currentPositions[i] += (Math.random() - 0.5) * 0.1;
+                }
+            }
+
+            particles.attributes.position.needsUpdate = true;
+        }
+
+        function animate() {
+            morphParticles(shapes[currentShapeIndex].clone());
+
+            particleSystem.rotation.y += 0.005;
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+
+        function shapeCycle() {
+            setInterval(() => {
+                currentShapeIndex = (currentShapeIndex + 1) % shapes.length;
+            }, 10000);
+        }
+
+        shapeCycle();
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        const accessKey = "IOvARGItCLbGM8qTT3qYW64TXt8Qxy5AiMHNl6p6z9g";
+        let nextPage = 1;
+        let currentQuery = '';
+
+        async function searchPhotos() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) {
+                alert('Please enter a keyword');
+                return;
+            }
+
+            currentQuery = query;
+            nextPage = 1;
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+            const heading = document.getElementById('dynamicHeading');
+            heading.textContent = `Results for: ${query}`;
+            heading.classList.add('dispersive');
+            setTimeout(() => heading.classList.remove('dispersive'), 1500);
+            await fetchPhotos(query);
+        }
+
+        async function fetchPhotos(query) {
+            const url = `https://api.unsplash.com/search/photos?query=${query}&page=${nextPage}&client_id=${accessKey}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const results = document.getElementById('results');
+
+                data.results.forEach(photo => {
+                    const container = document.createElement('div');
+                    container.classList.add('image-container');
+
+                    const img = document.createElement('img');
+                    img.src = photo.urls.small;
+                    img.alt = photo.alt_description || 'Unsplash Photo';
+
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.classList.add('download-btn');
+                    downloadBtn.textContent = 'Download';
+                    downloadBtn.onclick = () => {
+                        const link = document.createElement('a');
+                        link.href = photo.urls.full;
+                        link.download = 'photo.jpg';
+                        link.click();
+                    };
+
+                    container.appendChild(img);
+                    container.appendChild(downloadBtn);
+                    results.appendChild(container);
+                });
+
+                if (data.results.length > 0) {
+                    document.getElementById('loadMoreButton').style.display = 'block';
+                    nextPage++;
+                } else {
+                    document.getElementById('loadMoreButton').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error fetching photos:', error);
+                alert('An error occurred while fetching photos. Please try again later.');
+            }
+        }
+
+        async function loadMorePhotos() {
+            await fetchPhotos(currentQuery);
+        }
+    </script>
+</body>
+</html>
